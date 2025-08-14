@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Talken Chatbot</title>
+  <style>
+    /* Reset and base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1c2526;
+      color: #e0e0e0;
+      overflow: hidden;
+    }
+
+    /* Canvas for interactive background */
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.3;
+    }
+
+    /* Chat container */
+    .chat-container {
+      width: 100%;
+      height: 100vh;
+      background: rgba(34, 40, 49, 0.95);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    /* Header */
+    .chat-container h2 {
+      text-align: center;
+      background: #2a2f3b;
+      padding: 20px;
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #ffffff;
+      border-bottom: 1px solid #3a444f;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .header-btn {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      background: #4a5568;
+      color: #ffffff;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .header-btn:hover {
+      background: #6b7280;
+    }
+
+    /* Chat box */
+    #chat-box {
+      flex: 1;
+      padding: 25px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      background: transparent;
+    }
+
+    /* Message container */
+    .message-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 80%;
+    }
+
+    .user-msg-container {
+      align-self: flex-end;
+    }
+
+    .bot-msg-container {
+      align-self: flex-start;
+    }
+
+    /* Messages */
+    .user-msg, .bot-msg {
+      padding: 12px 20px;
+      border-radius: 10px;
+      line-height: 1.5;
+      font-size: 1rem;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .user-msg {
+      background: #3b82f6;
+      color: #ffffff;
+      border-bottom-right-radius: 2px;
+    }
+
+    .bot-msg {
+      background: #2f3a4a;
+      color: #e0e0e0;
+      border-bottom-left-radius: 2px;
+    }
+
+    .bot-msg.error {
+      background: #e63946;
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    .message-prefix {
+      font-weight: 700;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Message buttons */
+    .message-buttons {
+      display: flex;
+      gap: 5px;
+    }
+
+    .message-btn {
+      padding: 6px;
+      border-radius: 6px;
+      border: none;
+      background: #4a5568;
+      color: #ffffff;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .message-btn:hover {
+      background: #6b7280;
+    }
+
+    /* Input area */
+    .input-area {
+      display: flex;
+      padding: 20px;
+      background: #2a2f3b;
+      border-top: 1px solid #3a444f;
+    }
+
+    .input-area input {
+      flex: 1;
+      padding: 14px 20px;
+      border-radius: 10px;
+      border: 1px solid #4a5568;
+      outline: none;
+      font-size: 1rem;
+      background: #1f252f;
+      color: #e0e0e0;
+      transition: border-color 0.2s ease;
+    }
+
+    .input-area input:focus {
+      border-color: #3b82f6;
+      background: #252c38;
+    }
+
+    .input-area button {
+      padding: 14px 30px;
+      border-radius: 10px;
+      border: none;
+      background: #3b82f6;
+      color: #ffffff;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-left: 12px;
+      transition: background 0.2s ease;
+    }
+
+    .input-area button:hover {
+      background: #2563eb;
+    }
+
+    /* Scrollbar */
+    #chat-box::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #chat-box::-webkit-scrollbar-track {
+      background: #2a2f3b;
+    }
+
+    #chat-box::-webkit-scrollbar-thumb {
+      background: #4a5568;
+      border-radius: 4px;
+    }
+
+    /* Modal for chat history */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: #2a2f3b;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 20px;
+      position: relative;
+    }
+
+    .modal-content h3 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: #ffffff;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 1.5rem;
+      color: #ffffff;
+      cursor: pointer;
+    }
+
+    .history-item {
+      padding: 10px;
+      border-bottom: 1px solid #4a5568;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .history-item:hover {
+      background: #3a444f;
+    }
+
+    .history-item p {
+      margin: 5px 0;
+      font-size: 0.95rem;
+      color: #e0e0e0;
+    }
+
+    /* Responsive design */
+    @media (max-width: 600px) {
+      .chat-container h2 {
+        font-size: 1.5rem;
+        padding: 15px;
+      }
+
+      #chat-box {
+        padding: 15px;
+      }
+
+      .input-area {
+        padding: 15px;
+      }
+
+      .input-area input {
+        font-size: 0.95rem;
+        padding: 12px 18px;
+      }
+
+      .input-area button {
+        font-size: 0.95rem;
+        padding: 12px 20px;
+      }
+
+      .message-btn {
+        font-size: 0.8rem;
+        width: 28px;
+        height: 28px;
+      }
+
+      .modal-content {
+        width: 95%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bg-canvas"></canvas>
+  <div class="chat-container">
+    <h2>
+      🤖 Talken Chatbot
+      <div class="header-buttons">
+        <button class="header-btn" id="new-chat-btn">New Chat</button>
+        <button class="header-btn" id="history-btn">History</button>
+      </div>
+    </h2>
+    <div id="chat-box"></div>
+    <div class="input-area">
+      <input type="text" id="user-input" placeholder="Ask me anything...">
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+
+  <div class="modal" id="history-modal">
+    <div class="modal-content">
+      <span class="close-btn" id="close-modal">&times;</span>
+      <h3>Chat History</h3>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <script>
+    // Interactive background animation
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    const particleCount = 50;
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 5 + 2;
+        this.speedX = Math.random() * 0.5 - 0.25;
+        this.speedY = Math.random() * 0.5 - 0.25;
+      }
+
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+        if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+      }
+
+      draw() {
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function init() {
+      for (let i = 0; i < particleCount; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(particle => {
+        particle.update();
+        particle.draw();
+      });
+      requestAnimationFrame(animate);
+    }
+
+    init();
+    animate();
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+
+    // Chat functionality
+    let lastUserMessage = '';
+    let currentChatId = Date.now();
+    let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
+
+    function saveChatHistory() {
+      const chatBox = document.getElementById("chat-box");
+      const messages = Array.from(chatBox.querySelectorAll('.message-container')).map(container => {
+        const msgElement = container.querySelector('.user-msg, .bot-msg');
+        const isUser = msgElement.classList.contains('user-msg');
+        const text = msgElement.textContent.replace(/^(You:|Bot:)\s*/, '');
+        return { isUser, text };
+      });
+
+      const existingChatIndex = chatHistory.findIndex(chat => chat.id === currentChatId);
+      const chatEntry = {
+        id: currentChatId,
+        timestamp: new Date().toLocaleString(),
+        messages
+      };
+
+      if (existingChatIndex >= 0) {
+        chatHistory[existingChatIndex] = chatEntry;
+      } else {
+        chatHistory.push(chatEntry);
+      }
+
+      localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+    }
+
+    function displayChatHistory() {
+      const historyList = document.getElementById("history-list");
+      historyList.innerHTML = '';
+      chatHistory.forEach(chat => {
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.innerHTML = `
+          <p><strong>${chat.timestamp}</strong></p>
+          <p>${chat.messages[0]?.text.substring(0, 50) || 'Empty chat'}...</p>
+        `;
+        historyItem.addEventListener('click', () => {
+          currentChatId = chat.id;
+          const chatBox = document.getElementById("chat-box");
+          chatBox.innerHTML = '';
+          chat.messages.forEach(msg => {
+            const msgId = `msg-${Date.now() + Math.random()}`;
+            chatBox.innerHTML += `
+              <div class="message-container ${msg.isUser ? 'user-msg-container' : 'bot-msg-container'}">
+                <div class="${msg.isUser ? 'user-msg' : 'bot-msg'}" id="${msgId}">
+                  <span class="message-prefix">${msg.isUser ? 'You' : 'Bot'}:</span> ${msg.text}
+                </div>
+                <div class="message-buttons">
+                  <button class="message-btn copy-btn" data-msg-id="${msgId}" title="Copy">📋</button>
+                  ${!msg.isUser ? `<button class="message-btn regenerate-btn" title="Regenerate">🔄</button>` : ''}
+                </div>
+              </div>`;
+          });
+          document.getElementById("history-modal").style.display = 'none';
+          chatBox.scrollTop = chatBox.scrollHeight;
+        });
+        historyList.appendChild(historyItem);
+      });
+    }
+
+    async function sendMessage(message, isRegenerate = false) {
+      const input = document.getElementById("user-input");
+      const chatBox = document.getElementById("chat-box");
+
+      if (!isRegenerate) {
+        const userMessage = message || input.value.trim();
+        if (!userMessage) return;
+        lastUserMessage = userMessage;
+
+        const userMsgId = `msg-${Date.now()}`;
+        chatBox.innerHTML += `
+          <div class="message-container user-msg-container">
+            <div class="user-msg" id="${userMsgId}">
+              <span class="message-prefix">You:</span> ${userMessage}
+            </div>
+            <div class="message-buttons">
+              <button class="message-btn copy-btn" data-msg-id="${userMsgId}" title="Copy">📋</button>
+            </div>
+          </div>`;
+        input.value = "";
+      }
+
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({message: lastUserMessage})
+        });
+        const data = await response.json();
+
+        const botMsgId = `msg-${Date.now()}`;
+        if (data.response) {
+          chatBox.innerHTML += `
+            <div class="message-container bot-msg-container">
+              <div class="bot-msg" id="${botMsgId}">
+                <span class="message-prefix">Bot:</span> ${data.response}
+              </div>
+              <div class="message-buttons">
+                <button class="message-btn copy-btn" data-msg-id="${botMsgId}" title="Copy">📋</button>
+                <button class="message-btn regenerate-btn" title="Regenerate">🔄</button>
+              </div>
+            </div>`;
+        } else {
+          chatBox.innerHTML += `
+            <div class="message-container bot-msg-container">
+              <div class="bot-msg error" id="${botMsgId}">
+                <span class="message-prefix">Bot:</span> Error: ${data.error || 'Unknown error'}
+              </div>
+              <div class="message-buttons">
+                <button class="message-btn copy-btn" data-msg-id="${botMsgId}" title="Copy">📋</button>
+                <button class="message-btn regenerate-btn" title="Regenerate">🔄</button>
+              </div>
+            </div>`;
+        }
+        saveChatHistory();
+      } catch (err) {
+        const botMsgId = `msg-${Date.now()}`;
+        chatBox.innerHTML += `
+          <div class="message-container bot-msg-container">
+            <div class="bot-msg error" id="${botMsgId}">
+              <span class="message-prefix">Bot:</span> Network Error: ${err.message}
+            </div>
+            <div class="message-buttons">
+              <button class="message-btn copy-btn" data-msg-id="${botMsgId}" title="Copy">📋</button>
+              <button class="message-btn regenerate-btn" title="Regenerate">🔄</button>
+            </div>
+          </div>`;
+        saveChatHistory();
+      }
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Event listeners for send button and enter key
+    document.getElementById("send-btn").addEventListener("click", () => sendMessage());
+    document.getElementById("user-input").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") sendMessage();
+    });
+
+    // Event delegation for copy and regenerate buttons
+    document.getElementById("chat-box").addEventListener("click", function(e) {
+      if (e.target.classList.contains("copy-btn")) {
+        const msgId = e.target.getAttribute("data-msg-id");
+        const messageElement = document.getElementById(msgId);
+        const text = messageElement.textContent.replace(/^(You:|Bot:)\s*/, '');
+        navigator.clipboard.writeText(text).then(() => {
+          e.target.textContent = "✅";
+          setTimeout(() => { e.target.textContent = "📋"; }, 2000);
+        });
+      } else if (e.target.classList.contains("regenerate-btn")) {
+        sendMessage(lastUserMessage, true);
+      }
+    });
+
+    // New chat and history buttons
+    document.getElementById("new-chat-btn").addEventListener("click", () => {
+      document.getElementById("chat-box").innerHTML = '';
+      currentChatId = Date.now();
+      lastUserMessage = '';
+    });
+
+    document.getElementById("history-btn").addEventListener("click", () => {
+      displayChatHistory();
+      document.getElementById("history-modal").style.display = 'flex';
+    });
+
+    document.getElementById("close-modal").addEventListener("click", () => {
+      document.getElementById("history-modal").style.display = 'none';
+    });
+  </script>
+</body>
+</html>
