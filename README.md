@@ -1,4 +1,4 @@
-# Flask DeepSeek Chatbot
+# Flask Talken Chatbot
 
 A conversational AI chatbot built with Flask and DeepSeek's API, featuring a modern web interface.
 
